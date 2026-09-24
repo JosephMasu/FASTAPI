@@ -14,6 +14,7 @@ class Post(BaseModel):
     published: bool = True
     rating: Optional[int] = None
 
+
 def find_post(id):
     for p in my_posts:
         if p['id'] == id:
@@ -23,10 +24,12 @@ def find_post_index(id):
     for i, p in enumerate(my_posts):
         if p['id'] == id:
             return i
+            
 
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
+    
 
 @app.get("/api/v1/posts")
 def get_post():
