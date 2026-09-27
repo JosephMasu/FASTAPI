@@ -4,15 +4,18 @@ from fastapi import Body
 from pydantic import BaseModel
 from random import randrange
 
+
 app = FastAPI()
 
 my_posts = [{"title": "title of post 1", "content": "content of post 1", "id": 3}, {"title": "favorite foods", "content": "I like pizza", "id": 2}]
+
 
 class Post(BaseModel):
     title: str
     content: str
     published: bool = True
     rating: Optional[int] = None
+
 
 def find_post(id):
     for p in my_posts:
@@ -23,6 +26,7 @@ def find_post_index(id):
     for i, p in enumerate(my_posts):
         if p['id'] == id:
             return i          
+
 
 @app.get("/")
 async def read_root():
