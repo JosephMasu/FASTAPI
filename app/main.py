@@ -1,3 +1,5 @@
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi import Body
@@ -6,6 +8,14 @@ from random import randrange
 
 app = FastAPI()
 
+try: 
+    conn = psycopg2.connect(host='localhost', database='fastapi', user='masu', password='josepH089', cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor = conn.cursor()
+    print("Database connection was successful")
+
+except Exception as error:
+    print("Database connection failed")
+    print("Error: ", error)
 my_posts = [{"title": "title of post 1", "content": "content of post 1", "id": 3}, {"title": "favorite foods", "content": "I like pizza", "id": 2}]
 
 class Post(BaseModel):
