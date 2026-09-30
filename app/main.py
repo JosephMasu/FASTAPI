@@ -1,21 +1,38 @@
 import psycopg2
+import time
+import os
 from psycopg2.extras import RealDictCursor
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi import Body
 from pydantic import BaseModel
 from random import randrange
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
-try: 
-    conn = psycopg2.connect(host='localhost', database='fastapi', user='masu', password='josepH089', cursor_factory=psycopg2.extras.RealDictCursor)
-    cursor = conn.cursor()
-    print("Database connection was successful")
+while True:
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("DATABASE_HOST"),
+            database=os.getenv("DATABASE_NAME"),
+            user=os.getenv("DATABASE_USER"),
+            password=os.getenv("DATABASE_PASSWORD"),
+            port=os.getenv("DATABASE_PORT"),
+            cursor_factory=RealDictCursor
+        )
 
-except Exception as error:
-    print("Database connection failed")
-    print("Error: ", error)
+        cursor = conn.cursor()
+        
+        print("Database connection was successful")
+        break
+
+    except Exception as error:
+        print("Database connection failed")
+        print("Error:", error)
+        time.sleep(2)
 my_posts = [{"title": "title of post 1", "content": "content of post 1", "id": 3}, {"title": "favorite foods", "content": "I like pizza", "id": 2}]
 
 class Post(BaseModel):
@@ -41,14 +58,17 @@ async def read_root():
 
 @app.get("/api/v1/posts")
 def get_post():
-    return {"data": my_posts}
+    cursor.execute("SELECT * FROM posts")
+    posts = cursor.fetchall()
+    print(posts)
+    return {"data": posts}
     
 @app.post("/api/v1/posts", status_code=status.HTTP_201_CREATED)
 def post_post(new_post: Post):
-    post_dict = new_post.dict()
-    post_dict['id'] = randrange(0, 1000000)
-    my_posts.append(new_post.dict())
-    return {"data": post_dict}
+    cursor.execute("INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *", 
+                   (new_post.title, new_post.content, new_post.published))
+    new_post = cursor.fetchone()
+    return {"data": new_post}
 
 @app.get("/api/v1/posts/latest")
 def get_latest_byId():
