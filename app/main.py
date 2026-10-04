@@ -5,10 +5,21 @@ from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException, Response, status
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from . import models;
+from .database import engine, SessionLocal
+
+models.Base.metadata.create_all(bind=engine)
 
 load_dotenv()
 
 app = FastAPI()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 while True:
     try:
