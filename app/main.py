@@ -3,23 +3,18 @@ import time
 import os
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException, Response, status
-from pydantic import BaseModel
 from dotenv import load_dotenv
-from . import models;
-from .database import engine, SessionLocal
+from . import models, schemas;
+from .database import engine, get_db
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from .schemas import PostCreate 
 
 models.Base.metadata.create_all(bind=engine)
 
 load_dotenv()
 
 app = FastAPI()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 while True:
     try:
@@ -42,82 +37,76 @@ while True:
         print("Error:", error)
         time.sleep(2)
 
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool = True
-
 
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
 
-@app.get("/api/v1/posts")
-def get_posts():
-    cursor.execute("SELECT * FROM posts ORDER BY id")
-    posts = cursor.fetchall()
-    return {"data": posts}
+@app.get("/api/v1/posts/sqlalchemy")
+def test_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
 
-@app.post("/api/v1/posts", status_code=status.HTTP_201_CREATED)
-def create_post(new_post: Post):
-    cursor.execute(
-        "INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING *",
-        (new_post.title, new_post.content, new_post.published),
-    )
-    created_post = cursor.fetchone()
-    conn.commit()
-    return {"data": created_post}
+    return posts
 
-@app.get("/api/v1/posts/latest")
-def get_latest_post():
-    cursor.execute("SELECT * FROM posts ORDER BY id DESC LIMIT 1")
-    post = cursor.fetchone()
+@app.post("/api/v1/posts/sqlalchemy", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
+def create_post(new_post: schemas.PostCreate, db: Session = Depends(get_db)):
+    post = models.Post(**new_post.dict())
+    db.add(post)
+    db.commit()
+    db.refresh(post)
+    return  post
+
+@app.get("/api/v1/posts/latest/sqlalchemy")
+def get_latest_post(db: Session = Depends(get_db)):
+    post = db.query(models.Post).order_by(models.Post.id.desc()).first()
+    db.close()
+
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="no posts found",
         )
-    return {"latest_post": post}
+    return post
 
-@app.get("/api/v1/posts/{id}")
-def get_post_by_id(id: int):
-    cursor.execute("SELECT * FROM posts WHERE id = %s", (id,))
-    post = cursor.fetchone()
+@app.get("/api/v1/posts/slqalchemy/{id}")
+def get_post_by_id(id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == id).first()
+    db.close()
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} was not found",
         )
-    return {"data": post}
+    return post
 
-@app.delete("/api/v1/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post_by_id(id: int):
-    cursor.execute("DELETE FROM posts WHERE id = %s RETURNING *", (id,))
-    deleted_post = cursor.fetchone()
-    conn.commit()
-    if not deleted_post:
+@app.delete("/api/v1/posts/slqalchemy/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post_by_id(id: int, db:Session = Depends(get_db)):
+    deleted_post = db.query(models.Post).filter(models.Post.id == id)
+    
+    post = deleted_post.first()
+
+    if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} was not found",
         )
+
+    deleted_post.delete(synchronize_session=False)
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@app.put("/api/v1/posts/{id}")
-def update_post_by_id(id: int, post: Post):
-    cursor.execute(
-        """
-        UPDATE posts
-        SET title = %s, content = %s, published = %s, updated_at = now()
-        WHERE id = %s
-        RETURNING *
-        """,
-        (post.title, post.content, post.published, id),
-    )
-    updated_post = cursor.fetchone()
-    conn.commit()
-    if not updated_post:
+@app.put("/api/v1/posts/slqalchemy/{id}")
+def update_post_by_id(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
+    post_query = db.query(models.Post).filter(models.Post.id == id)
+
+    db_post = post_query.first()
+
+    if not db_post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} was not found",
         )
-    return {"data": updated_post}
+    
+    post_query.update(post.dict(), synchronize_session=False)
+    db.commit()
+    return db_post
