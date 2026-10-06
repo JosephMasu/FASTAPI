@@ -4,11 +4,11 @@ import os
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException, Response, status
 from dotenv import load_dotenv
-from . import models, schemas;
+from . import models, schemas, utils
 from .database import engine, get_db
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from .schemas import PostCreate 
+from .schemas import PostCreate, Post, UserCreate, User
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -42,7 +42,7 @@ while True:
 async def read_root():
     return {"Hello": "World"}
 
-@app.get("/api/v1/posts/sqlalchemy")
+@app.get("/api/v1/posts/sqlalchemy", status_code=status.HTTP_200_OK, response_model=list[schemas.Post])
 def test_posts(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
 
@@ -68,7 +68,7 @@ def get_latest_post(db: Session = Depends(get_db)):
         )
     return post
 
-@app.get("/api/v1/posts/slqalchemy/{id}")
+@app.get("/api/v1/posts/slqalchemy/{id}", response_model=schemas.Post)
 def get_post_by_id(id: int, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
     db.close()
@@ -95,7 +95,7 @@ def delete_post_by_id(id: int, db:Session = Depends(get_db)):
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@app.put("/api/v1/posts/slqalchemy/{id}")
+@app.put("/api/v1/posts/slqalchemy/{id}", response_model=schemas.Post) 
 def update_post_by_id(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
     post_query = db.query(models.Post).filter(models.Post.id == id)
 
@@ -110,3 +110,15 @@ def update_post_by_id(id: int, post: schemas.PostCreate, db: Session = Depends(g
     post_query.update(post.dict(), synchronize_session=False)
     db.commit()
     return db_post
+
+@app.post("/api/v1/users", status_code=status.HTTP_201_CREATED, response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+
+    hashed_password = utils.hash(user.password)
+    user.password = hashed_password
+
+    new_user = models.User(**user.dict())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
