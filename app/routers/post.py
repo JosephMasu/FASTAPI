@@ -1,17 +1,20 @@
-from . . import models, schemas, utils
-from fastapi import FastAPI, HTTPException, Response, status, Depends, APIRouter
+from . . import models, schemas
+from fastapi import HTTPException, Response, status, Depends, APIRouter
 from sqlalchemy.orm import Session
 from . .database import engine, get_db
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/api/v1/posts",
+    tags=["Posts"]
+)
 
-@router.get("/api/v1/posts/sqlalchemy", status_code=status.HTTP_200_OK, response_model=list[schemas.Post])
+@router.get("/sqlalchemy", status_code=status.HTTP_200_OK, response_model=list[schemas.Post])
 def test_posts(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
 
     return posts
 
-@router.post("/api/v1/posts/sqlalchemy", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
+@router.post("/sqlalchemy", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
 def create_post(new_post: schemas.PostCreate, db: Session = Depends(get_db)):
     post = models.Post(**new_post.dict())
     db.add(post)
@@ -19,7 +22,7 @@ def create_post(new_post: schemas.PostCreate, db: Session = Depends(get_db)):
     db.refresh(post)
     return  post
 
-@router.get("/api/v1/posts/latest/sqlalchemy")
+@router.get("/latest/sqlalchemy")
 def get_latest_post(db: Session = Depends(get_db)):
     post = db.query(models.Post).order_by(models.Post.id.desc()).first()
     db.close()
@@ -31,7 +34,7 @@ def get_latest_post(db: Session = Depends(get_db)):
         )
     return post
 
-@router.get("/api/v1/posts/slqalchemy/{id}", response_model=schemas.Post)
+@router.get("/slqalchemy/{id}", response_model=schemas.Post)
 def get_post_by_id(id: int, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
     db.close()
@@ -42,7 +45,7 @@ def get_post_by_id(id: int, db: Session = Depends(get_db)):
         )
     return post
 
-@router.delete("/api/v1/posts/slqalchemy/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/slqalchemy/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post_by_id(id: int, db:Session = Depends(get_db)):
     deleted_post = db.query(models.Post).filter(models.Post.id == id)
     
@@ -58,7 +61,7 @@ def delete_post_by_id(id: int, db:Session = Depends(get_db)):
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.put("/api/v1/posts/slqalchemy/{id}", response_model=schemas.Post) 
+@router.put("/slqalchemy/{id}", response_model=schemas.Post) 
 def update_post_by_id(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
     post_query = db.query(models.Post).filter(models.Post.id == id)
 

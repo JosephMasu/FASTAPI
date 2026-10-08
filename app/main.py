@@ -9,6 +9,7 @@ from .database import engine, get_db
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from .schemas import PostCreate, Post, UserCreate, User
+from .routers import post, user, auth
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -37,7 +38,9 @@ while True:
         print("Error:", error)
         time.sleep(2)
 
-
+app.include_router(post.router)
+app.include_router(user.router)
+app.include_router(auth.router)
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
