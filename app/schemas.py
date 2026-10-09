@@ -10,10 +10,17 @@ class PostBase(BaseModel):
 class PostCreate(PostBase):
     pass
 
+class User(BaseModel):
+    id: int
+    email: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 class Post(PostBase):
     id: int
     created_at: datetime
     owner_id: int
+    owner: User
 
     class Config:
         orm_mode = True
@@ -21,13 +28,6 @@ class Post(PostBase):
 class UserCreate(BaseModel):
     email: str
     password: str
-
-class User(BaseModel):
-    id: int
-    email: str
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 class UserLogin(BaseModel):
     email: str

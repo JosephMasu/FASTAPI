@@ -38,12 +38,17 @@ def get_latest_post(db: Session = Depends(get_db)):
 
 @router.get("/slqalchemy/{id}", response_model=schemas.Post)
 def get_post_by_id(id: int, db: Session = Depends(get_db),current_user: models.User = Depends(oauth2.get_current_user)): 
-    post = db.query(models.Post).filter(models.Post.id == current_user.id).first()
-    db.close()
+    post = db.query(models.Post).filter(models.Post.id == id).first()
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} was not found",
+        )
+    
+    if post.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,  
+            detail="Not authorized to perform requested action",
         )
     return post
 
