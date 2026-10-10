@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import psycopg2
+from datetime import time
+from psycopg2.extras import RealDictCursor
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -24,3 +27,26 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+
+while True:
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("DATABASE_HOST"),
+            database=os.getenv("DATABASE_NAME"),
+            user=os.getenv("DATABASE_USER"),
+            password=os.getenv("DATABASE_PASSWORD"),
+            port=os.getenv("DATABASE_PORT"),
+            cursor_factory=RealDictCursor
+        )
+
+        cursor = conn.cursor()
+        
+        print("Database connection was successful")
+        break
+
+    except Exception as error:
+        print("Database connection failed")
+        print("Error:", error)
+        time.sleep(2)
