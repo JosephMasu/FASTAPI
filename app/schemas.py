@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime 
-from typing import Optional
+from typing import Optional, Annotated
+from pydantic import conint
 
 class PostBase(BaseModel):
     title: str
@@ -22,8 +23,13 @@ class Post(PostBase):
     owner_id: int
     owner: User
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+class PostOut(BaseModel):
+    post: Post = Field(validation_alias="Post")
+    votes: int
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class UserCreate(BaseModel):
     email: str
@@ -39,3 +45,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id: Optional[int] = None
+
+class Vote(BaseModel):
+    post_id: int
+    dir: Annotated[int, conint(ge=0, le=1)]
