@@ -33,6 +33,17 @@ target_metadata = Base.metadata
 # ... etc.
 
 
+def get_url() -> str:
+    return URL.create(
+        drivername="postgresql+psycopg2",
+        username=os.getenv("DATABASE_USER"),
+        password=os.getenv("DATABASE_PASSWORD"),
+        host=os.getenv("DATABASE_HOST"),
+        port=int(os.getenv("DATABASE_PORT", "5432")),
+        database=os.getenv("DATABASE_NAME"),
+    ).render_as_string(hide_password=False)
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -45,17 +56,10 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = URL.create(
-        drivername="postgresql+psycopg2",
-        username=os.getenv("DATABASE_USER"),
-        password=os.getenv("DATABASE_PASSWORD"),
-        host=os.getenv("DATABASE_HOST"),
-        port=int(os.getenv("DATABASE_PORT", "5432")),
-        database=os.getenv("DATABASE_NAME"),
-    )
+    url = get_url()
 
     context.configure(
-        url=url.render_as_string(hide_password=False),
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -72,8 +76,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = get_url()
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
