@@ -1,20 +1,26 @@
 from logging.config import fileConfig
+import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
 from app.models import Base
-from dotenv import load_dotenv
-from pathlib import Path
-from sqlalchemy.engine.url import URL
-import os
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+config.set_main_option(
+    "sqlalchemy.url",
+    (
+        f"postgresql+psycopg2://{os.getenv('DATABASE_USER')}:{os.getenv('DATABASE_PASSWORD')}"
+        f"@{os.getenv('DATABASE_HOST')}:{os.getenv('DATABASE_PORT')}/{os.getenv('DATABASE_NAME')}"
+    ).replace("%", "%%"),
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -33,17 +39,6 @@ target_metadata = Base.metadata
 # ... etc.
 
 
-def get_url() -> str:
-    return URL.create(
-        drivername="postgresql+psycopg2",
-        username=os.getenv("DATABASE_USER"),
-        password=os.getenv("DATABASE_PASSWORD"),
-        host=os.getenv("DATABASE_HOST"),
-        port=int(os.getenv("DATABASE_PORT", "5432")),
-        database=os.getenv("DATABASE_NAME"),
-    ).render_as_string(hide_password=False)
-
-
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -56,8 +51,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_url()
-
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -76,10 +70,8 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = get_url()
     connectable = engine_from_config(
-        configuration,
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
