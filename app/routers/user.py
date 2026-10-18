@@ -17,7 +17,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-@router.get("/{id}", response_model=schemas.User)
+@router.get("/{id}", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
 def get_user_by_id(id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == id).first()
     db.close()

@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from dotenv import load_dotenv
 from . import models
 from .database import engine
@@ -26,7 +26,7 @@ app.include_router(post.router)
 app.include_router(user.router)
 app.include_router(auth.router)
 app.include_router(vote.router)
-@app.get("/")
+@app.get("/", status_code=status.HTTP_200_OK)
 async def read_root():
     return {"Hello": "World"}
 
