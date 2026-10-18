@@ -45,6 +45,19 @@ uvicorn app.main:app --reload
 
 Interactive docs are at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
+## Docker
+
+Build the API image and start it with Postgres:
+
+```bash
+docker compose build
+docker compose up
+```
+
+Compose reads `.env` for the database name, user, password, and JWT settings. Inside the stack the API connects to the `db` service, not `127.0.0.1`. Postgres is published on host port `5436` so it does not collide with a database already using `5432`. The API is at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Migrations run when the API container starts.
+
+This is not part of the GitHub Actions workflow. That workflow only runs the tests.
+
 ## Authentication
 
 Create a user with `POST /api/v1/users/`, then log in with `POST /api/v1/auth/login`.
